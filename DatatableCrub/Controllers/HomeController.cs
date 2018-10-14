@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DatatableCrub.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -13,18 +14,94 @@ namespace DatatableCrub.Controllers
             return View();
         }
 
-        public ActionResult About()
+        public ActionResult GetEmployees()
         {
-            ViewBag.Message = "Your application description page.";
-
-            return View();
+            using (MyDatabaseEntities dc = new MyDatabaseEntities())
+            {
+                var employees = dc.Employees.OrderBy(a => a.FirstName).ToList();
+                return Json(new { data = employees }, JsonRequestBehavior.AllowGet);
+            }
         }
 
-        public ActionResult Contact()
+        [HttpGet]
+        public ActionResult Save(int id)
         {
-            ViewBag.Message = "Your contact page.";
+            using (MyDatabaseEntities dc = new MyDatabaseEntities())
+            {
+                var v = dc.Employees.Where(a => a.EmployeeId == id).FirstOrDefault();
+                return View(v);
+            }
 
-            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Save(Employee emp)
+        {
+            bool status = false;
+            if (ModelState.IsValid)
+            {
+                using (MyDatabaseEntities dc = new MyDatabaseEntities())
+                {
+                    if (emp.EmployeeId > 0)
+                    {
+                        //Edit
+                        var v = dc.Employees.Where(a => a.EmployeeId == emp.EmployeeId).FirstOrDefault();
+                        if (v != null)
+                        {
+                            v.FirstName = emp.FirstName;
+                            v.LastName = emp.LastName;
+                            v.EmailID = emp.EmailID;
+                            v.City = emp.City;
+                            v.Country = emp.Country;
+                        }
+                    }
+                    else
+                    {
+                        //save
+                        dc.Employees.Add(emp);
+                    }
+                    dc.SaveChanges();
+                    status = true;
+                }
+            }
+            return new JsonResult { Data = new { status = status } };
+        }
+
+        [HttpGet]
+        public ActionResult Delete(int id)
+        {
+            using (MyDatabaseEntities dc = new MyDatabaseEntities())
+            {
+                var v = dc.Employees.Where(a => a.EmployeeId == id).FirstOrDefault();
+                if (v != null)
+                {
+                    return View(v);
+                }
+                else {
+                    return HttpNotFound();
+                }
+            }
+
+        }
+
+        [HttpPost]
+        [ActionName("Delete")]
+        public ActionResult DeleteEmployee(int id)
+        {
+            bool status = false;
+            using (MyDatabaseEntities dc = new MyDatabaseEntities())
+            {
+                var v = dc.Employees.Where(a => a.EmployeeId == id).FirstOrDefault();
+                if (v != null)
+                {
+                    dc.Employees.Remove(v);
+                    dc.SaveChanges();
+                    status = true;
+                }
+            }
+
+            return new JsonResult { Data = new { status = status} };
+
         }
     }
 }
